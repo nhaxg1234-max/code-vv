@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxy Gallery - Trái Tim Thiên Hà</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #000;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* Thẻ welcome ban đầu */
+        .card-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            background: rgba(20, 10, 35, 0.75);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 105, 180, 0.3);
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(255, 20, 147, 0.3);
+            transition: opacity 1s ease, transform 1s ease;
+        }
+
+        .card-container.hide {
+            opacity: 0;
+            transform: translate(-50%, -60%);
+            pointer-events: none;
+        }
+
+        .card-title {
+            font-size: 2.2rem;
+            margin-bottom: 15px;
+            background: linear-gradient(45deg, #ff71ce, #01cdfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: bold;
+        }
+
+        .card-subtitle {
+            font-size: 0.95rem;
+            color: #d8b4fe;
+            margin-bottom: 25px;
+        }
+
+        .btn-start {
+            padding: 12px 35px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(45deg, #ff4081, #7c4dff);
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 64, 129, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .btn-start:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 25px rgba(255, 64, 129, 0.8);
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div class="card-container" id="welcomeCard">
+        <h1 class="card-title">Galaxy Gallery</h1>
+        <p class="card-subtitle">ERES MI PRINCESA ✨</p>
+        <button class="btn-start" onclick="startGalaxy()">INICIAR</button>
+    </div>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let galaxyGeometry, galaxyMaterial, galaxyPoints;
+        let heartGeometry, heartMaterial, heartPoints;
+        let started = false;
+
+        function initThree() {
+            const container = document.getElementById('canvas-container');
+
+            // Scene
+            scene = new THREE.Scene();
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 30);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Tạo các hệ hạt
+            createBackgroundStars();
+            createGalaxy();
+            createHeart();
+
+            // Resize event
+            window.addEventListener('resize', onWindowResize);
+
+            // Animation loop
+            animate();
+        }
+
+        // Tạo sao nền
+        function createBackgroundStars() {
+            const count = 2000;
+            const positions = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+
+            for (let i = 0; i < count; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 200;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 200;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 200;
+
+                colors[i * 3] = Math.random();
+                colors[i * 3 + 1] = Math.random();
+                colors[i * 3 + 2] = 1;
+            }
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const mat = new THREE.PointsMaterial({
+                size: 0.8,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const stars = new THREE.Points(geo, mat);
+            scene.add(stars);
+        }
+
+        // Tạo Đĩa Thiên Hà (Galaxy Spiral)
+        function createGalaxy() {
+            const count = 15000;
+            const positions = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
+
+            const colorInside = new THREE.Color('#ff00aa');
+            const colorOutside = new THREE.Color('#00d4ff');
+
+            for (let i = 0; i < count; i++) {
+                const r = Math.random() * 15;
+                const arms = 3;
+                const theta = (i % arms) * ((2 * Math.PI) / arms) + r * 0.4;
+
+                const randomX = (Math.random() - 0.5) * 0.5 * r;
+                const randomY = (Math.random() - 0.5) * 0.3 * (15 - r);
+                const randomZ = (Math.random() - 0.5) * 0.5 * r;
+
+                positions[i * 3] = Math.cos(theta) * r + randomX;
+                positions[i * 3 + 1] = randomY;
+                positions[i * 3 + 2] = Math.sin(theta) * r + randomZ;
+
+                const mixedColor = colorInside.clone().lerp(colorOutside, r / 15);
+                colors[i * 3] = mixedColor.r;
+                colors[i * 3 + 1] = mixedColor.g;
+                colors[i * 3 + 2] = mixedColor.b;
+            }
+
+            galaxyGeometry = new THREE.BufferGeometry();
+            galaxyGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            galaxyGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            galaxyMaterial = new THREE.PointsMaterial({
+                size: 0.15,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending
+            });
+
+            galaxyPoints = new THREE.Points(galaxyGeometry, galaxyMaterial);
+            scene.add(galaxyPoints);
+        }
+
+        // Tạo Trái Tim Bằng Hạt 3D
+        function createHeart() {
+            const count = 8000;
+            const positions = new Float32Array(count * 3);
+            const colors = new Float32Array(count * 3);
